@@ -32,9 +32,14 @@ def home(request):
                 'type' : request.POST['type'],
                 'regionCode' : request.POST['regionCode'],
                 'relevanceLanguage' : request.POST['relevanceLanguage'],
-                'videoDefinition' : 'high'
+                'videoDefinition' : 'high',
+                'videoDuration' : 'short',
+                'videoLicense' : 'creativeCommon',
+                'order' : 'ViewCount'
 
-            }
+
+            } 
+             
             idList = []
             req = requests.get(search_url, params =searchParameter)
             items = req.json()['items']
