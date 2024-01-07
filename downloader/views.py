@@ -33,11 +33,9 @@ def home(request):
                 'regionCode' : request.POST['regionCode'],
                 'relevanceLanguage' : request.POST['relevanceLanguage'],
                 'videoDefinition' : 'high',
-                'videoDuration' : 'short',
-                'videoLicense' : 'creativeCommon',
-                'order' : 'ViewCount'
-
-
+                'videoDuration' : 'medium',
+                #'videoLicense' : 'creativeCommon',
+                'order' : 'relevance'
             } 
              
             idList = []
@@ -90,6 +88,50 @@ def home(request):
              print(e)
     context = {'videos':videos,'flag':flag}
     return render(request,'downloader/home.html',context)
+
+
+def download_video(request):
+    if request.method == 'POST':
+        video_url = request.POST.get('video_url')
+        sct = request.POST['sct']
+        ect = request.POST['ect']
+        obj = YouTube(video_url)
+        video_stream = obj.streams.get_highest_resolution()
+        video_name = obj.title[0:4].replace(" ","_")
+
+        download_path_with_title = downloadPath+video_name
+
+        folderPath = downloadPath+video_name +"_fold/"
+
+        video_stream.download(folderPath)
+
+        os.rename(os.path.join(folderPath, video_stream.default_filename),
+              os.path.join(folderPath,video_name + extension))
+        
+        downloadedPath = folderPath + video_name + extension
+        folder_video_path = folderPath + video_name
+        print('video downloaded complete')
+        createShortVideo(downloadedPath,folder_video_path, sct, ect)
+
+        
+    return render(request, 'downloader/home.html')
+
+def textToSpeech():
+    from gtts import gTTS
+
+    text = "This is an example sentence to be converted to speech."
+    tts = gTTS(text=text, lang='en')
+    tts.save('output_audio.mp3')
+
+
+def tts(request):
+    if request.method == 'POST':
+        text = request.POST.get('text')
+        tts = gTTS(text=text, lang='en')
+        tts.save('static/output_audio.mp3')  # Save the generated audio
+        return render(request, 'tts.html', {'audio': True})
+    return render(request, 'tts.html')
+
 
 
 def download(request,id):
