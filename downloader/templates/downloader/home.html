@@ -44,14 +44,25 @@
                 {% csrf_token %}
                 <div class="row">
                   <div class="input-group mb-3 col-md-10" style="margin:0 auto">
-                    <input type="text" id="video_url" placeholder="sct"   aria-label="Username">
+                    <input type="text" name="video_url" placeholder="video_url" class="form-control"  aria-label="Username">
 
-                <input type="text" id="sct" placeholder="sct"   aria-label="Username">
-                <input type="text" id="ect" placeholder="ect"   aria-label="Username">
-                <button name="submit" value="search" class="btn btn-hover color-2 my-2"><i class="fab fa-searchengin"></i>Download Video</button>
-              </div>
+                    <input type="text" name="sct" placeholder="sct" class="form-control"  aria-label="Username">
+                    <input type="text" name="ect" placeholder="ect" class="form-control"  aria-label="Username">
+    
+    
+                  <button class="btn" style="color: red;" type="submit"> <i class="fas fa-download"> </i></button>
+     </div>
             </div>
             </form>
+
+
+            
+
+
+
+
+
+
 
             <form action="{% url 'tts' %}" method="post">
               {% csrf_token %}

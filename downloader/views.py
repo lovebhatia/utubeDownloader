@@ -4,7 +4,7 @@ import requests
 from pytube import *
 import os
 from isodate import parse_duration
-from moviepy.editor import VideoFileClip, clips_array, concatenate_videoclips
+from moviepy.editor import VideoFileClip, clips_array, concatenate_videoclips, vfx, CompositeVideoClip
 from moviepy.editor import VideoFileClip
 import numpy as np
 import cv2
@@ -91,16 +91,16 @@ def home(request):
 
 
 def download_video(request):
+    
     if request.method == 'POST':
-        video_url = request.POST.get('video_url')
+        video_url = request.POST['video_url']
         sct = request.POST['sct']
         ect = request.POST['ect']
+        print('video_url --> ' +video_url)
         obj = YouTube(video_url)
         video_stream = obj.streams.get_highest_resolution()
         video_name = obj.title[0:4].replace(" ","_")
-
         download_path_with_title = downloadPath+video_name
-
         folderPath = downloadPath+video_name +"_fold/"
 
         video_stream.download(folderPath)
@@ -120,7 +120,7 @@ def textToSpeech():
     from gtts import gTTS
 
     text = "This is an example sentence to be converted to speech."
-    tts = gTTS(text=text, lang='en')
+    tts = gTTS(text=text, lang='en', tld='com.au')
     tts.save('output_audio.mp3')
 
 
@@ -176,8 +176,9 @@ def createShortVideo(downloadedVideoPath, folder_path, sct, ect) :
 
     moviePyConvertToShortsFormat(trim_output_path,folder_path)
     #convert_to_shorts_vid_gear(trim_output_path, folder_path, 60)
-    #openCVConvertToShortsFormat()
+    openCVConvertToShortsFormat(trim_output_path,folder_path)
     #convert_to_shorts('C:/Users/lovebhatia/Videos/Captures/Ramp_fold/Ramp_trimp.mp4', 'C:/Users/lovebhatia/Videos/Captures/Ramp_fold/Ramp_trimp_ff.mp4')
+    resize_and_focus_left(trim_output_path,folder_path)
 
     
 def moviePyConvertToShortsFormat(trim_output_path, folder_path):
@@ -212,8 +213,32 @@ def moviePyConvertToShortsFormat(trim_output_path, folder_path):
     # Save the resized video
     final_video_shorts.write_videofile(ytShortsOutputPath, codec='libx264', fps=30)  # Adjust parameters as needed
     print('short video creation completed')
-
     create_thumbnail(trim_output_path,folder_path,0)
+
+
+
+def resize_and_focus_left(trim_output_path, folder_path):
+    video = VideoFileClip(trim_output_path)
+    ytShortsOutputPath = folder_path + '_yt_resize_shorts' + ".mp4"
+
+    # Calculate the 9:16 resolution from the original video's width
+    target_width = int(video.w * 9 / 16)
+    target_height = video.h
+    
+    # Resize the video to 9:16 aspect ratio
+    resized_video = video.resize(width=target_width, height=target_height)
+    
+    # Focus on the left side by positioning the video
+    left_focused = resized_video.crop(x1=0, y1=0, x2=video.w, y2=video.h)
+    
+    # Generate a black screen with the same size to fill the right side
+    right_blank = left_focused.fx(vfx.painting, width=video.w, height=video.h)
+    
+    # Combine the left-focused video and the black screen
+    final_video = CompositeVideoClip([left_focused, right_blank.set_position(('right', 0))])
+    
+    # Write the final video to a file
+    final_video.write_videofile(ytShortsOutputPath, codec="libx264", fps=24)
 
 
 def create_thumbnail(video_path, folderPath, at_time=0):
@@ -321,10 +346,10 @@ def playlistDownload(request):
         video.streams.get_highest_resolution().download('')
     return redirect('playlist')
 
-def openCVConvertToShortsFormat():
+def openCVConvertToShortsFormat(ip,op):
     print('inOpenCV')
-    input_path = 'C:/Users/lovebhatia/Videos/Captures/tripped_love.mp4'
-    output_path = 'C:/Users/lovebhatia/Videos/Captures/openCvShort.mp4'
+    input_path = ip
+    output_path = 'C:/Users/lovebhatia/Videos/Captures/openCvShortanub.mp4'
 
     clip = VideoFileClip(input_path)
     audio = clip.audio
