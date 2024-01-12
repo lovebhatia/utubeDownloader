@@ -1,3 +1,4 @@
+from django.http import HttpResponse
 from django.shortcuts import render,redirect
 from django.conf import settings
 import requests
@@ -8,21 +9,33 @@ from moviepy.editor import VideoFileClip, clips_array, concatenate_videoclips, v
 from moviepy.editor import VideoFileClip
 import numpy as np
 import cv2
-from vidgear.gears import WriteGear
 import subprocess
+from openai import OpenAI
+
 
 extension = ".mp4"
 thumbnail_name = "thumbnail.png"
-downloadPath = "C:/Users/lovebhatia/Videos/Captures/"
+downloadPath = "D:/Projects/django_project/dvid/"
 output_thumbnail_path = "C:/Users/lovebhatia/Videos/Captures/thumbnail.png"
 search_url ='https://www.googleapis.com/youtube/v3/search'
 video_url = 'https://www.googleapis.com/youtube/v3/videos'
+direct_short_video_path = 'D:/Projects/django_project/dvid/direct_path/vid_direct.mp4'
+folder_direct_path = 'D:/Projects/django_project/dvid/direct_path/'
 
 def home(request):
+    #createShortVideoWithDirectPath(direct_short_video_path,direct_short_video_path, 6754, 6820)
+    #createCartoonisedVideo(direct_short_video_path)
+    openAiIntegration()
     videos =[]
     flag = 0
     allItem = []
-    if request.method =='POST':
+    if request.method =='POST' and 'action' in request.POST:
+        action = request.POST['action']
+        if action == 'call_method':
+            result =  createShortVideoWithDirectPath(direct_short_video_path,folder_direct_path, 2092, 2150)
+            return HttpResponse(f"Method called! Result: {result}")
+     
+    if request.method =='POST': 
         try:
             searchParameter = {
                 'part' : 'snippet',
@@ -180,6 +193,23 @@ def createShortVideo(downloadedVideoPath, folder_path, sct, ect) :
     #convert_to_shorts('C:/Users/lovebhatia/Videos/Captures/Ramp_fold/Ramp_trimp.mp4', 'C:/Users/lovebhatia/Videos/Captures/Ramp_fold/Ramp_trimp_ff.mp4')
     resize_and_focus_left(trim_output_path,folder_path)
 
+
+def createShortVideoWithDirectPath(downloadedVideoDirectPath, folder_direct_path, sct, ect) :
+    print('Short Video Creation started')
+    trim_output_path = folder_direct_path + "_trim"+ extension
+    print("trim output path --> ", trim_output_path)
+    video = VideoFileClip(downloadedVideoDirectPath)
+    shorts_video = video.subclip(sct,ect)  
+    # Replace this with your desired output path
+    shorts_video.write_videofile(trim_output_path , codec='libx264', fps=30)
+    print('Short Video Creation completed')
+
+    moviePyConvertToShortsFormat(trim_output_path,folder_direct_path)
+    #convert_to_shorts_vid_gear(trim_output_path, folder_path, 60)
+    #openCVConvertToShortsFormat(trim_output_path,folder_direct_path)
+    #convert_to_shorts('C:/Users/lovebhatia/Videos/Captures/Ramp_fold/Ramp_trimp.mp4', 'C:/Users/lovebhatia/Videos/Captures/Ramp_fold/Ramp_trimp_ff.mp4')
+    #resize_and_focus_left(trim_output_path,folder_direct_path)
+
     
 def moviePyConvertToShortsFormat(trim_output_path, folder_path):
 
@@ -214,6 +244,36 @@ def moviePyConvertToShortsFormat(trim_output_path, folder_path):
     final_video_shorts.write_videofile(ytShortsOutputPath, codec='libx264', fps=30)  # Adjust parameters as needed
     print('short video creation completed')
     create_thumbnail(trim_output_path,folder_path,0)
+
+
+def createCartoonisedVideo(inputVideoPath):
+
+    # Load the video
+    input_video = inputVideoPath
+    cap = cv2.VideoCapture(input_video)
+
+    # Prepare output video writer
+    output_video = 'cartoonized_video.mp4'
+    fps = cap.get(cv2.CAP_PROP_FPS)
+    width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    out = cv2.VideoWriter(output_video, cv2.VideoWriter_fourcc(*'mp4v'), fps, (width, height))
+
+    while cap.isOpened():
+        ret, frame = cap.read()
+        if not ret:
+            break
+
+        # Convert frame to cartoon-like or animated version
+        # Example: Apply bilateral filter and edge-aware filters for cartoon effect
+        cartoonized_frame = cv2.stylization(frame, sigma_s=150, sigma_r=0.25)
+        
+        # Write the cartoonized frame to the output video
+        out.write(cartoonized_frame)
+
+    # Release video capture and writer
+    cap.release()
+    out.release()
 
 
 
@@ -274,47 +334,21 @@ def convert_to_shorts(input_video, output_video):
         print(f"Error occurred: {e.stderr.decode()}")
 
 
+def openAiIntegration():
+    OpenAI.api_key = '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'
+   
+    response = OpenAI.completion.create(
+        engine="text-davinci-002",
+        prompt="Write a Django view that...",
+        max_tokens=100,
+    )
+
+    generated_code = response['choices'][0]['text']
+    print(generated_code)
 
 
 
 
-def convert_to_shorts_vid_gear(input_video, output_folder, duration):
-    try:
-        # Open video file
-        stream = cv2.VideoCapture(input_video)
-
-        # Initialize variables
-        frames_per_second = stream.get(cv2.CAP_PROP_FPS)
-        total_frames = int(stream.get(cv2.CAP_PROP_FRAME_COUNT))
-        segment_duration = int(frames_per_second * duration)
-        segment_number = 1
-
-        # Read and write video segments
-        while True:
-            frames = []
-            for _ in range(segment_duration):
-                (grabbed, frame) = stream.read()
-                if not grabbed:
-                    break
-                frames.append(frame)
-
-            if len(frames) == 0:
-                break
-
-            output_path = f"{output_folder}/segment_{segment_number}.mp4"
-            writer = WriteGear(output_path, logging=True)
-            for frame in frames:
-                writer.write(frame)
-            writer.close()
-            segment_number += 1
-
-        # Release video stream
-        stream.release()
-        cv2.destroyAllWindows()
-        print("Conversion completed successfully!")
-
-    except Exception as e:
-        print(f"Error occurred: {str(e)}")
 
 
 
